@@ -1,8 +1,11 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from database import Base, engine
-from routers import case_router
+from routers import case_router, page_router
 
 
 @asynccontextmanager
@@ -19,12 +22,32 @@ app = FastAPI(
 )
 
 
-@app.get("/")
-def root():
-    return {
-        "message": "Case Builder API is running."
-    }
+# --------------------------------------------------
+# Static Files
+# --------------------------------------------------
 
+app.mount(
+    "/static",
+    StaticFiles(directory="static"),
+    name="static",
+)
+
+# --------------------------------------------------
+# Jinja Templates
+# --------------------------------------------------
+
+templates = Jinja2Templates(directory="templates")
+
+# --------------------------------------------------
+# API Routes
+# --------------------------------------------------
+
+app.include_router(page_router)
+app.include_router(case_router)
+
+# --------------------------------------------------
+# Health Check
+# --------------------------------------------------
 
 @app.get("/health")
 def health():
@@ -33,4 +56,3 @@ def health():
     }
 
 
-app.include_router(case_router)

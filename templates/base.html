@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "partials/head.html" %}
+</head>
+
+<body class="bg-gray-100">
+
+    {% include "partials/navbar.html" %}
+
+    <main class="container mx-auto py-8">
+
+        {% block content %}
+        {% endblock %}
+
+    </main>
+
+    {% include "partials/scripts.html" %}
+
+</body>
+
+</html>

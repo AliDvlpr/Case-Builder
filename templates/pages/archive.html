@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="max-w-5xl mx-auto py-12 px-4">
+
+    <div class="flex items-start justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-[#0F172A]">
+                Saved Cases
+            </h1>
+            <p class="mt-2 text-[15px] text-[#667085]">
+                Open a saved case study, continue editing it, or copy the final output.
+            </p>
+        </div>
+
+        <a
+            href="/cases/new"
+            class="inline-flex items-center rounded-xl bg-[#18233F] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0F1830]"
+        >
+            Create New Case
+        </a>
+    </div>
+
+
+    <div class="flex items-center gap-3 mb-6">
+
+        <input
+            type="text"
+            placeholder="Search saved cases"
+            class="flex-1 max-w-xs rounded-xl border border-[#E4E7EC] px-4 py-2.5 text-sm text-[#0F172A] placeholder-[#98A2B3] outline-none transition focus:border-[#4F6BFF] focus:ring-2 focus:ring-[#4F6BFF]/15"
+        >
+
+        <div class="flex items-center gap-2">
+            <button type="button" class="rounded-xl bg-[#18233F] px-4 py-2.5 text-sm font-semibold text-white">
+                All
+            </button>
+            <button type="button" class="rounded-xl border border-[#E4E7EC] bg-white px-4 py-2.5 text-sm font-medium text-[#344054] hover:border-[#D0D5DD]">
+                Draft
+            </button>
+            <button type="button" class="rounded-xl border border-[#E4E7EC] bg-white px-4 py-2.5 text-sm font-medium text-[#344054] hover:border-[#D0D5DD]">
+                Needs Review
+            </button>
+            <button type="button" class="rounded-xl border border-[#E4E7EC] bg-white px-4 py-2.5 text-sm font-medium text-[#344054] hover:border-[#D0D5DD]">
+                Complete
+            </button>
+        </div>
+
+        <div class="ml-auto text-sm text-[#667085]">
+            {{ cases|length if cases is defined else 3 }} cases
+        </div>
+    </div>
+
+
+    <div class="space-y-4">
+
+        <!-- Needs Review case -->
+        <div class="rounded-2xl border border-[#E7EAF0] bg-white p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-[#0F172A]">Petabad Checkout Improvement</h2>
+                    <p class="mt-1 text-sm text-[#667085]">Updated 2 hours ago</p>
+                    <p class="mt-1 text-sm text-[#667085]">7 of 9 sections complete</p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-[#FEE685] bg-[#FFFBEB] px-3 py-1 text-xs font-semibold text-[#BB4D00]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#FFB900]"></span>
+                        Needs Review
+                    </span>
+                    <a href="/cases/1" class="rounded-xl bg-[#18233F] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0F1830]">
+                        Open Case
+                    </a>
+                </div>
+            </div>
+
+            <div class="mt-5 flex items-center gap-3">
+                <div class="flex-1 h-2 rounded-full bg-[#F1F4F9] overflow-hidden">
+                    <div class="h-full rounded-full bg-[#FFB900]" style="width: 78%"></div>
+                </div>
+                <span class="text-sm text-[#667085] w-10 text-right">78%</span>
+            </div>
+        </div>
+
+
+        <!-- Draft case -->
+        <div class="rounded-2xl border border-[#E7EAF0] bg-white p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-[#0F172A]">Mobile Banking Onboarding</h2>
+                    <p class="mt-1 text-sm text-[#667085]">Updated yesterday</p>
+                    <p class="mt-1 text-sm text-[#667085]">5 of 9 sections complete</p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7EC] bg-[#F3F4F6] px-3 py-1 text-xs font-semibold text-[#667085]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#98A2B3]"></span>
+                        Draft
+                    </span>
+                    <a href="/cases/2" class="rounded-xl bg-[#18233F] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0F1830]">
+                        Open Case
+                    </a>
+                </div>
+            </div>
+
+            <div class="mt-5 flex items-center gap-3">
+                <div class="flex-1 h-2 rounded-full bg-[#F1F4F9] overflow-hidden">
+                    <div class="h-full rounded-full bg-[#98A2B3]" style="width: 56%"></div>
+                </div>
+                <span class="text-sm text-[#667085] w-10 text-right">56%</span>
+            </div>
+        </div>
+
+
+        <!-- Complete case -->
+        <div class="rounded-2xl border border-[#E7EAF0] bg-white p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-[#0F172A]">E-commerce Search Redesign</h2>
+                    <p class="mt-1 text-sm text-[#667085]">Updated 3 days ago</p>
+                    <p class="mt-1 text-sm text-[#667085]">9 of 9 sections complete</p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-[#A4F4CF] bg-[#ECFDF5] px-3 py-1 text-xs font-semibold text-[#007A55]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#00BC7D]"></span>
+                        Complete
+                    </span>
+                    <button type="button" class="inline-flex items-center gap-2 rounded-xl border border-[#E4E7EC] bg-white px-4 py-2.5 text-sm font-medium text-[#344054] hover:border-[#D0D5DD]">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy Output
+                    </button>
+                    <a href="/cases/3" class="rounded-xl bg-[#18233F] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0F1830]">
+                        Open Case
+                    </a>
+                </div>
+            </div>
+
+            <div class="mt-5 flex items-center gap-3">
+                <div class="flex-1 h-2 rounded-full bg-[#F1F4F9] overflow-hidden">
+                    <div class="h-full rounded-full bg-[#00BC7D]" style="width: 100%"></div>
+                </div>
+                <span class="text-sm text-[#667085] w-10 text-right">100%</span>
+            </div>
+        </div>
+
+    </div>
+
+
+    {% if config and config.DEBUG %}
+    <div class="mt-10 rounded-2xl border border-dashed border-[#D9DEE8] bg-[#F5F6FA] p-6 max-w-md">
+        <p class="text-[11px] font-semibold tracking-wider text-[#98A2B3] uppercase">
+            Developer Handoff &middot; UI-03 &mdash; Case Archive
+        </p>
+        <ul class="mt-4 space-y-2.5 text-sm text-[#475467] list-disc list-inside">
+            <li>Archive opens with the All filter selected.</li>
+            <li>Search filters saved cases by title.</li>
+            <li>Status filters change the visible case list.</li>
+            <li>Open Case restores the saved content inside UI-02.</li>
+            <li>Copy Output copies the final structured content.</li>
+            <li>Empty Archive is a separate product state.</li>
+            <li>The empty state must not appear while saved cases exist.</li>
+            <li>Create New Case opens UI-01.</li>
+        </ul>
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

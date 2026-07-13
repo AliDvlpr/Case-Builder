@@ -9,13 +9,13 @@ from schemas import CreateCaseRequest, CaseListItem, CaseDetailResponse, UpdateC
 from services.ai.case_builder import generate_case
 from services.storage.case_storage import save_case
 
-router = APIRouter(
+case_router = APIRouter(
     prefix="/cases",
     tags=["Cases"],
 )
 
 
-@router.post("")
+@case_router.post("")
 def create_case(
     request: CreateCaseRequest,
     db: Session = Depends(get_db),
@@ -47,7 +47,7 @@ def create_case(
     }
 
 
-@router.get(
+@case_router.get(
     "",
     response_model=list[CaseListItem],
 )
@@ -58,7 +58,7 @@ def list_cases(
     return get_cases(db)
 
 
-@router.get(
+@case_router.get(
     "/{case_id}",
     response_model=CaseDetailResponse,
 )
@@ -89,7 +89,7 @@ def get_case(
         "result": json.loads(case.generated_json),
     }
 
-@router.put(
+@case_router.put(
     "/{case_id}",
     response_model=UpdateCaseRequest,
 )

@@ -5,7 +5,13 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from repositories import get_cases, get_case_by_id, update_case
-from schemas import CreateCaseRequest, CaseListItem, CaseDetailResponse, UpdateCaseRequest, UpdateCaseRequest
+from schemas import (
+    CreateCaseRequest,
+    CaseListItem,
+    CaseDetailResponse,
+    UpdateCaseRequest,
+    UpdateCaseRequest,
+)
 from services.ai.case_builder import generate_case
 from services.storage.case_storage import save_case
 
@@ -13,7 +19,6 @@ case_router = APIRouter(
     prefix="/cases",
     tags=["Cases"],
 )
-
 
 @case_router.post("")
 def create_case(
@@ -23,7 +28,7 @@ def create_case(
 
     result = generate_case(request.note)
 
-    if "error" in result:  
+    if "error" in result:
         raise HTTPException(
             status_code=500,
             detail=result["error"],
@@ -89,6 +94,7 @@ def get_case(
         "result": json.loads(case.generated_json),
     }
 
+
 @case_router.put(
     "/{case_id}",
     response_model=UpdateCaseRequest,
@@ -116,31 +122,19 @@ def update_case_endpoint(
 
     title = payload.get("title")
 
-    if (
-        title is not None
-        and isinstance(title, str)
-        and title.strip()
-    ):
+    if title is not None and isinstance(title, str) and title.strip():
         case.title = title.strip()
         changed = True
 
     template = payload.get("template")
 
-    if (
-        template is not None
-        and isinstance(template, str)
-        and template.strip()
-    ):
+    if template is not None and isinstance(template, str) and template.strip():
         case.template = template.strip()
         changed = True
 
     result = payload.get("result")
 
-    if (
-        result is not None
-        and isinstance(result, dict)
-        and len(result) > 0
-    ):
+    if result is not None and isinstance(result, dict) and len(result) > 0:
         case.generated_json = json.dumps(
             result,
             ensure_ascii=False,

@@ -1,8 +1,8 @@
 from services.ai.client import ai_client
 from services.ai.parser import parse_case_response
 
-
 PROMPT_TEMPLATE = """
+THIS IS THE NEW PROMPT
 You are an expert Product Design Case Study Assistant.
 
 Your job is to transform an unstructured Product Design project note into a structured Product Design Case Study.
@@ -15,88 +15,168 @@ IMPORTANT RULES
 4. Never explain your answer.
 5. Never invent information.
 6. Never guess.
-7. If information is missing, return null.
-8. Do NOT return empty strings.
+7. If information is unavailable, use null.
+8. Never return empty strings.
 9. Keep every field concise.
 10. Separate Solution from Impact.
 11. Never create fake metrics.
-12. If metrics are unavailable, explicitly say they are unavailable.
-13. missing_info must ONLY contain field names.
+12. Do not infer information that is not explicitly supported by the note.
+13. Never infer users.
+14. If target users are not explicitly mentioned, set content=null and status="Missing".
+15. Every field MUST contain BOTH:
+   - content
+   - status
+16. Allowed status values are ONLY:
+   - Complete
+   - Weak
+   - Missing
+   - Unclear
+
+STATUS DEFINITIONS
+
+Complete
+The information is explicitly stated and sufficiently detailed to be used in a professional case study.
+
+Weak
+The information exists but lacks important details, context, reasoning, specificity, or confidence.
+
+Missing
+The note contains no usable information for this field.
+Set content to null.
+
+Unclear
+The note contains conflicting, ambiguous or difficult-to-interpret information.
+Do not guess. Briefly explain why the information is unclear.
 
 Return EXACTLY this schema:
 
 {
-    "project_overview": null,
-    "problem": null,
-    "my_role": null,
-    "users_context": null,
-    "research": null,
-    "key_ux_decisions": null,
-    "solution": null,
-    "impact": null,
-    "what_i_learned": null,
-    "missing_info": []
+    "project_overview": {
+        "content": null,
+        "status": "Missing"
+    },
+    "problem": {
+        "content": null,
+        "status": "Missing"
+    },
+    "my_role": {
+        "content": null,
+        "status": "Missing"
+    },
+    "users_context": {
+        "content": null,
+        "status": "Missing"
+    },
+    "research": {
+        "content": null,
+        "status": "Missing"
+    },
+    "key_ux_decisions": {
+        "content": null,
+        "status": "Missing"
+    },
+    "solution": {
+        "content": null,
+        "status": "Missing"
+    },
+    "impact": {
+        "content": null,
+        "status": "Missing"
+    },
+    "what_i_learned": {
+        "content": null,
+        "status": "Missing"
+    }
 }
 
 FIELD DEFINITIONS
 
-project_overview:
+project_overview
 A one or two sentence summary of the project.
 
-problem:
+problem
 The primary user or business problem.
 
-my_role:
-The designer's role and responsibilities.
-Only include information explicitly mentioned.
+my_role
+The designer's responsibilities.
+Only include responsibilities explicitly mentioned.
 
-users_context:
-Target users and project context.
-Do not assume demographics.
+users_context
+Who the users are and the relevant project context.
+Do not assume demographics or personas.
 
-research:
+research
 Mention analytics, interviews, usability testing,
 observations or any research activities that were
 explicitly described.
 
 key_ux_decisions:
-The important UX decisions that were made and why.
+Describe the reasoning behind the important UX decisions.
+Do NOT list implemented features.
+Explain why each decision was made.
 
 solution:
-Describe what was designed, changed or implemented.
+Describe what was implemented.
+Do NOT explain why it was implemented.
 
-impact:
-Describe measurable results.
-If only expected results are available,
-explicitly mention that metrics are unavailable.
+impact
+Describe measurable outcomes.
+If the note only mentions expected improvements,
+mark the field as weak.
+Never invent metrics.
 
-what_i_learned:
-Lessons learned by the designer.
+what_i_learned
+Lessons or reflections explicitly mentioned by the designer.
 
-missing_info:
+STATUS EXAMPLES
 
-Return ONLY field names.
+Example 1
 
-Allowed values:
+Input:
+"I analyzed Hotjar recordings and interviewed five users."
 
-[
-    "project_overview",
-    "problem",
-    "my_role",
-    "users_context",
-    "research",
-    "key_ux_decisions",
-    "solution",
-    "impact",
-    "what_i_learned"
-]
+Output:
 
-Example:
+{
+    "content": "Reviewed Hotjar recordings and interviewed five users.",
+    "status": "Complete"
+}
 
-[
-    "research",
-    "impact"
-]
+Example 2
+
+Input:
+"I talked with some users."
+
+Output:
+
+{
+    "content": "Some users were consulted.",
+    "status": "Weak"
+}
+
+Example 3
+
+Input:
+(no research mentioned)
+
+Output:
+
+{
+    "content": null,
+    "status": "Missing"
+}
+
+Example 4
+
+Input:
+"The client says users loved it but another sentence says users hated it."
+
+Output:
+
+{
+    "content": "Conflicting statements about user feedback.",
+    "status": "Unclear"
+}
 
 RAW PROJECT NOTE
 
@@ -137,6 +217,7 @@ def generate_case(note: str) -> dict:
             raw_response,
         )
 
+        print (result)
         return result
 
     except Exception as e:

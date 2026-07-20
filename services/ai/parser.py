@@ -2,22 +2,43 @@ import json
 import re
 
 
-EXPECTED_SCHEMA = {
-    "project_overview": None,
-    "problem": None,
-    "my_role": None,
-    "users_context": None,
-    "research": None,
-    "key_ux_decisions": None,
-    "solution": None,
-    "impact": None,
-    "what_i_learned": None,
+EXPECTED_FIELDS = [
+    "project_overview",
+    "problem",
+    "my_role",
+    "users_context",
+    "research",
+    "key_ux_decisions",
+    "solution",
+    "impact",
+    "what_i_learned",
+]
+
+VALID_STATUSES = {
+    "complete",
+    "weak",
+    "missing",
+    "unclear",
 }
+
+
+def _default_schema() -> dict:
+    """
+    Create the normalized schema.
+    """
+
+    return {
+        field: {
+            "content": None,
+            "status": "missing",
+        }
+        for field in EXPECTED_FIELDS
+    }
 
 
 def _remove_markdown(text: str) -> str:
     """
-    Remove markdown code blocks.
+    Remove markdown code fences.
     """
 
     text = text.strip()
@@ -31,7 +52,7 @@ def _remove_markdown(text: str) -> str:
 
 def _remove_thinking(text: str) -> str:
     """
-    Remove <think>...</think> blocks used by some reasoning models.
+    Remove reasoning blocks produced by some models.
     """
 
     return re.sub(
@@ -44,7 +65,7 @@ def _remove_thinking(text: str) -> str:
 
 def _extract_json(text: str) -> str:
     """
-    Extract the first JSON object from text.
+    Extract the first JSON object.
     """
 
     start = text.find("{")
@@ -56,27 +77,63 @@ def _extract_json(text: str) -> str:
     return text[start:end + 1]
 
 
+def _normalize_field(value) -> dict:
+    """
+    Normalize a single field.
+    """
+
+    if value is None:
+        return {
+            "content": None,
+            "status": "missing",
+        }
+
+    # Old schema compatibility
+    if isinstance(value, str):
+        return {
+            "content": value.strip() or None,
+            "status": "complete" if value.strip() else "missing",
+        }
+
+    if not isinstance(value, dict):
+        return {
+            "content": None,
+            "status": "missing",
+        }
+
+    content = value.get("content")
+    status = str(value.get("status", "missing")).lower()
+
+    if content == "":
+        content = None
+
+    if status not in VALID_STATUSES:
+        status = "missing"
+
+    return {
+        "content": content,
+        "status": status,
+    }
+
+
 def _normalize_schema(data: dict) -> dict:
     """
-    Make sure every expected key exists.
+    Normalize the whole AI response.
     """
 
-    result = EXPECTED_SCHEMA.copy()
+    result = _default_schema()
 
-    result["missing_info"] = []
-
-    for key, value in data.items():
-        result[key] = value
-
-    if result["missing_info"] is None:
-        result["missing_info"] = []
+    for field in EXPECTED_FIELDS:
+        result[field] = _normalize_field(
+            data.get(field)
+        )
 
     return result
 
 
 def parse_case_response(text: str) -> dict:
     """
-    Parse raw LLM response into validated JSON.
+    Parse raw LLM response into validated schema.
     """
 
     cleaned = _remove_markdown(text)

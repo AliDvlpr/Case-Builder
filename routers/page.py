@@ -38,11 +38,11 @@ def new_case(request: Request):
         name="pages/new_case.html",
     )
 
+
 @page_router.post("/cases/generate")
 def generate_case_page(
     request: Request,
     db: Session = Depends(get_db),
-
     template: str = Form("product_designer"),
     project_name: str = Form(...),
     raw_notes: str = Form(...),
@@ -73,6 +73,7 @@ def generate_case_page(
         status_code=303,
     )
 
+
 SECTION_DEFINITIONS = [
     ("01", "Project Overview", "project_overview"),
     ("02", "Problem", "problem"),
@@ -84,6 +85,16 @@ SECTION_DEFINITIONS = [
     ("08", "Impact", "impact"),
     ("09", "What I Learned", "what_i_learned"),
 ]
+
+TOTAL_FIELDS = len(SECTION_DEFINITIONS)
+
+STATUS_ORDER = [
+    "complete",
+    "weak",
+    "unclear",
+    "missing",
+]
+
 
 @page_router.get("/cases/{case_id}/edit")
 def edit_case(
@@ -104,32 +115,34 @@ def edit_case(
 
     result = json.loads(case.generated_json)
 
-    filled, progress = calculate_progress(result)
+    counts, progress = calculate_progress(result)
 
     sections = []
 
     for number, title, key in SECTION_DEFINITIONS:
 
-        value = result.get(key)
+        field = result.get(key, {})
 
-        if value in (None, "", []):
-            status = "missing"
-            body = ""
-        else:
-            status = "complete"
-            body = value
+        if not isinstance(field, dict):
+            field = {
+                "content": field,
+                "status": "missing",
+            }
 
-        sections.append({
-            "number": number,
-            "title": title,
-            "key": key,
-            "status": status,
-            "body": body,
-        })
+        sections.append(
+            {
+                "number": number,
+                "title": title,
+                "key": key,
+                "status": field.get("status", "missing"),
+                "body": field.get("content") or "",
+            }
+        )
 
-    missing_sections = [
-        s for s in sections
-        if s["status"] == "missing"
+    review_sections = [
+        section
+        for section in sections
+        if section["status"] != "complete"
     ]
 
     return templates.TemplateResponse(
@@ -139,48 +152,54 @@ def edit_case(
             "case": case,
             "result": result,
             "sections": sections,
-            "missing_sections": missing_sections,
+            "review_sections": review_sections,
+            "counts": counts,
             "progress": progress,
-            "filled_sections": filled,
+            "filled_sections": counts["complete"],
             "total_sections": TOTAL_FIELDS,
             "custom_navbar": "partials/edit_navbar.html",
         },
     )
 
-TOTAL_FIELDS = 9
 
+def calculate_progress(result: dict) -> tuple[dict, int]:
 
-def calculate_progress(result: dict) -> tuple[int, int]:
-    fields = [
-        "project_overview",
-        "problem",
-        "my_role",
-        "users_context",
-        "research",
-        "key_ux_decisions",
-        "solution",
-        "impact",
-        "what_i_learned",
-    ]
+    counts = {
+        "complete": 0,
+        "weak": 0,
+        "unclear": 0,
+        "missing": 0,
+    }
 
-    filled = 0
+    for _, _, key in SECTION_DEFINITIONS:
 
-    for field in fields:
-        value = result.get(field)
+        field = result.get(key)
 
-        if value not in (None, "", []):
-            filled += 1
+        if isinstance(field, dict):
+            status = field.get("status", "missing")
+        else:
+            status = "missing"
 
-    progress = round((filled / TOTAL_FIELDS) * 100)
+        if status not in counts:
+            status = "missing"
 
-    return filled, progress
+        counts[status] += 1
+
+    progress = round(
+        (counts["complete"] / TOTAL_FIELDS) * 100
+    )
+
+    return counts, progress
+
 
 def humanize_datetime(dt: datetime) -> str:
 
     now = datetime.now(timezone.utc)
 
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(
+            tzinfo=timezone.utc,
+        )
 
     diff = now - dt
 
@@ -225,17 +244,19 @@ def archive(
 
         filled, progress = calculate_progress(result)
 
-        archive_cases.append({
-            "id": case.id,
-            "title": case.title,
-            "status": case.status,
-            "version": case.version,
-            "template": case.template,
-            "updated_at": humanize_datetime(case.updated_at),
-            "created_at": case.created_at,
-            "progress": progress,
-            "filled_sections": filled,
-        })
+        archive_cases.append(
+            {
+                "id": case.id,
+                "title": case.title,
+                "status": case.status,
+                "version": case.version,
+                "template": case.template,
+                "updated_at": humanize_datetime(case.updated_at),
+                "created_at": case.created_at,
+                "progress": progress,
+                "filled_sections": filled,
+            }
+        )
 
     archive_cases.sort(
         key=lambda x: x["created_at"],

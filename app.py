@@ -7,7 +7,6 @@ from fastapi.templating import Jinja2Templates
 from database import Base, engine
 from routers import case_router, page_router
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
@@ -54,5 +53,3 @@ def health():
     return {
         "status": "healthy"
     }
-
-

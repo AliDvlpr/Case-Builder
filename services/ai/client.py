@@ -15,10 +15,7 @@ class AIClient:
             base_url=os.getenv("OPENAI_BASE_URL"),
         )
 
-        self.model = os.getenv(
-            "MODEL",
-            "deepseek-chat"
-        )
+        self.model = os.getenv("MODEL", "deepseek-chat")
 
     def generate(
         self,
@@ -28,15 +25,17 @@ class AIClient:
 
         if system_prompt is None:
             system_prompt = (
-                "You are a senior Product Design mentor. "
+                "You are a senior Product Design mentor and UX hiring reviewer. "
                 "Always return valid JSON only. "
                 "Never use markdown. "
-                "Never invent information."
+                "Never explain your output. "
+                "Never invent information. "
+                "If information is insufficient, return null and assign the correct status."
             )
 
         response = self.client.chat.completions.create(
             model=self.model,
-            temperature=0.2,
+            temperature=0,
             messages=[
                 {
                     "role": "system",

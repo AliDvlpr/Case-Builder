@@ -94,17 +94,12 @@ def get_case(
         "result": json.loads(case.generated_json),
     }
 
-
-@case_router.put(
-    "/{case_id}",
-    response_model=UpdateCaseRequest,
-)
-def update_case_endpoint(
+@case_router.patch("/{case_id}")
+def review_case_field(
     case_id: int,
-    request: UpdateCaseRequest,
+    request: dict,
     db: Session = Depends(get_db),
 ):
-
     case = get_case_by_id(
         db=db,
         case_id=case_id,
@@ -116,51 +111,40 @@ def update_case_endpoint(
             detail="Case not found.",
         )
 
-    payload = request.model_dump(exclude_unset=True)
+    current_case = json.loads(case.generated_json)
 
-    changed = False
+    updates = request.get("result")
 
-    title = payload.get("title")
-
-    if title is not None and isinstance(title, str) and title.strip():
-        case.title = title.strip()
-        changed = True
-
-    template = payload.get("template")
-
-    if template is not None and isinstance(template, str) and template.strip():
-        case.template = template.strip()
-        changed = True
-
-    result = payload.get("result")
-
-    if result is not None and isinstance(result, dict) and len(result) > 0:
-        case.generated_json = json.dumps(
-            result,
-            ensure_ascii=False,
-        )
-        changed = True
-
-    if not changed:
+    if not isinstance(updates, dict):
         raise HTTPException(
             status_code=400,
-            detail="No valid fields provided for update.",
+            detail="Invalid payload.",
         )
 
-    case.version += 1
+    field_name = next(iter(updates.keys()))
+    field_data = updates[field_name]
 
-    case = update_case(
-        db=db,
-        case=case,
-    )
+    print("=" * 80)
+    print("CASE ID:")
+    print(case_id)
+
+    print("\nFULL CASE:")
+    print(json.dumps(current_case, indent=2, ensure_ascii=False))
+
+    print("\nUPDATED FIELD:")
+    print(json.dumps(
+        {
+            field_name: field_data,
+        },
+        indent=2,
+        ensure_ascii=False,
+    ))
+
+    print("=" * 80)
 
     return {
-        "id": case.id,
-        "title": case.title,
-        "template": case.template,
-        "status": case.status,
-        "version": case.version,
-        "created_at": case.created_at,
-        "updated_at": case.updated_at,
-        "result": json.loads(case.generated_json),
+        "success": True,
+        "message": "Payload received.",
+        "field": field_name,
+        "content": field_data.get("content"),
     }

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from repositories import get_cases, get_case_by_id, update_case
+from repositories import get_cases, get_case_by_id, update_case_content, update_case
 from schemas import (
     CreateCaseRequest,
     CaseListItem,
@@ -13,6 +13,8 @@ from schemas import (
     UpdateCaseRequest,
 )
 from services.ai.case_builder import generate_case
+from services.ai.case_editor import evaluate_field_status, CaseEditorError
+from services.case_status import calculate_case_status
 from services.storage.case_storage import save_case
 
 case_router = APIRouter(
@@ -115,7 +117,7 @@ def review_case_field(
 
     updates = request.get("result")
 
-    if not isinstance(updates, dict):
+    if not isinstance(updates, dict) or not updates:
         raise HTTPException(
             status_code=400,
             detail="Invalid payload.",
@@ -124,27 +126,93 @@ def review_case_field(
     field_name = next(iter(updates.keys()))
     field_data = updates[field_name]
 
+    if field_name not in current_case:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown field: {field_name}",
+        )
+
+    new_content = field_data.get("content")
+
+    try:
+        evaluation = evaluate_field_status(
+            full_case=current_case,
+            field_name=field_name,
+            field_content=new_content,
+        )
+
+    except CaseEditorError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"AI status check failed: {exc}",
+        )
+
+    # -------- Update JSON --------
+
+    current_case[field_name]["content"] = new_content
+    current_case[field_name]["status"] = evaluation["status"]
+
+    update_case_content(
+        db=db,
+        case=case,
+        generated_json=current_case,
+    )
+
     print("=" * 80)
-    print("CASE ID:")
-    print(case_id)
+    print("CASE ID:", case_id)
+    print()
 
-    print("\nFULL CASE:")
-    print(json.dumps(current_case, indent=2, ensure_ascii=False))
-
-    print("\nUPDATED FIELD:")
     print(json.dumps(
-        {
-            field_name: field_data,
-        },
+        {field_name: current_case[field_name]},
         indent=2,
         ensure_ascii=False,
     ))
 
+    print()
+    print("AI reasoning:", evaluation["reasoning"])
     print("=" * 80)
 
     return {
         "success": True,
-        "message": "Payload received.",
         "field": field_name,
-        "content": field_data.get("content"),
+        "content": new_content,
+        "status": evaluation["status"],
     }
+
+@case_router.post("/{case_id}/status")
+def update_case_status(
+    case_id: int,
+    db: Session = Depends(get_db),
+):
+    case = get_case_by_id(
+        db=db,
+        case_id=case_id,
+    )
+
+    if case is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Case not found.",
+        )
+
+    case_json = json.loads(case.generated_json)
+
+    status = calculate_case_status(case_json)
+
+    case.status = status
+
+    update_case(
+        db=db,
+        case=case,
+    )
+
+    return {
+    "success": True,
+    "status": case.status,
+    "redirect": "/archive",
+    "toast": {
+        "type": "success",
+        "title": "Case status updated",
+        "description": f'"{case.title}" is now marked as {case.status.replace("_", " ").title()}.'
+    }
+}

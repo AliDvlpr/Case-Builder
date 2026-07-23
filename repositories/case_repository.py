@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy.orm import Session
 
 from models.case import CaseStudy
@@ -41,6 +43,26 @@ def update_case(
     db: Session,
     case: CaseStudy,
 ) -> CaseStudy:
+
+    db.commit()
+    db.refresh(case)
+
+    return case
+
+def update_case_content(
+    db: Session,
+    case: CaseStudy,
+    generated_json: dict,
+    status: str | None = None,
+) -> CaseStudy:
+
+    case.generated_json = json.dumps(
+        generated_json,
+        ensure_ascii=False,
+    )
+
+    if status is not None:
+        case.status = status
 
     db.commit()
     db.refresh(case)

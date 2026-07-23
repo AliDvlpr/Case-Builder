@@ -70,12 +70,14 @@ limitation, reflection, or next step from the project." } %}
           </div>
 
           <span
-            class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium"
+            id="status-{{ section.key }}"
+            data-status="{{ section.status }}"
+            class="field-status inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-300"
             style="
-                background: {{ style.bg }};
-                border-color: {{ style.border }};
-                color: {{ style.text }};
-            "
+                    background: {{ style.bg }};
+                    border-color: {{ style.border }};
+                    color: {{ style.text }};
+                  "
           >
             {{ style.label }}
           </span>
@@ -102,19 +104,38 @@ limitation, reflection, or next step from the project." } %}
         <div class="flex items-center justify-between">
           <h2 class="text-[18px] font-semibold text-[#101828]">Progress</h2>
 
-          <span class="text-sm font-medium text-[#667085]">
+          <span
+            id="case-progress-count"
+            class="text-sm font-medium text-[#667085]"
+          >
             {{ counts.complete }} / {{ total_sections }}
           </span>
         </div>
 
         <div class="mt-4 h-2 rounded-full bg-[#EAECF0] overflow-hidden">
           <div
-            class="h-full rounded-full bg-[#18233F] transition-all duration-300"
-            style="width: {{ progress }}%;"
+            id="case-progress-bar"
+            class="h-full rounded-full transition-all duration-500"
+            style="
+            width: {{ progress }}%;
+            background:
+            {% if progress == 100 %}
+                #00BC7D
+            {% elif progress >= 50 %}
+                #3B82F6
+            {% elif progress >= 25 %}
+                #FFB900
+            {% else %}
+                #EF4444
+            {% endif %};
+        "
           ></div>
         </div>
 
-        <div class="mt-2 text-right text-sm text-[#667085]">
+        <div
+          id="case-progress-text"
+          class="mt-2 text-right text-sm text-[#667085]"
+        >
           {{ progress }}% Complete
         </div>
       </div>
@@ -234,6 +255,33 @@ limitation, reflection, or next step from the project." } %}
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  const STATUS_STYLE = {
+    complete: {
+      label: "Complete",
+      bg: "#ECFDF3",
+      border: "#BBF7D0",
+      color: "#15803D",
+    },
+    weak: {
+      label: "Weak",
+      bg: "#FFF7ED",
+      border: "#FED7AA",
+      color: "#C2410C",
+    },
+    unclear: {
+      label: "Unclear",
+      bg: "#F5F3FF",
+      border: "#DDD6FE",
+      color: "#6D28D9",
+    },
+    missing: {
+      label: "Missing",
+      bg: "#FEF2F2",
+      border: "#FECACA",
+      color: "#B91C1C",
+    },
+  };
+
   // state: "pill" | "circle" | "hidden"
   // icon:  "spinner" | "success" | "error" | null
   function setBadge({ state, theme, label = "", icon = null }) {
@@ -306,12 +354,40 @@ limitation, reflection, or next step from the project." } %}
     });
   });
 
+  function updateFieldStatus(field, status) {
+    const badge = document.getElementById(`status-${field}`);
+
+    if (!badge) return;
+
+    const style = STATUS_STYLE[status];
+
+    if (!style) return;
+
+    badge.style.transition = "all .25s ease";
+
+    badge.style.transform = "scale(.9)";
+    badge.style.opacity = ".4";
+
+    setTimeout(() => {
+      badge.textContent = style.label;
+
+      badge.style.background = style.bg;
+      badge.style.borderColor = style.border;
+      badge.style.color = style.color;
+
+      badge.dataset.status = status;
+
+      badge.style.transform = "scale(1)";
+      badge.style.opacity = "1";
+    }, 150);
+  }
+
   async function autoSave(textarea) {
     const payload = {
       result: { [textarea.dataset.key]: { content: textarea.value } },
     };
 
-    await sleep(2000);
+    await sleep(200);
 
     setBadge({
       state: "pill",
@@ -332,6 +408,9 @@ limitation, reflection, or next step from the project." } %}
       });
       const data = await response.json();
       console.log(data);
+      updateFieldStatus(data.field, data.status);
+
+      setTimeout(updateProgress, 170);
 
       setBadge({
         state: "pill",
@@ -351,7 +430,84 @@ limitation, reflection, or next step from the project." } %}
         label: "Failed",
         icon: "error",
       });
+      setTimeout(() => {
+        setBadge({ state: "circle", theme: "error", icon: "error" });
+      }, 900);
     }
+  }
+
+  const saveBtn = document.getElementById("save-case-btn");
+
+  saveBtn.addEventListener("click", saveCaseStatus);
+
+  async function saveCaseStatus() {
+    saveBtn.disabled = true;
+
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = "Saving...";
+
+    try {
+      const response = await fetch(`/cases/{{ case.id }}/status`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.detail || "Failed to save case.");
+      }
+
+      sessionStorage.setItem(
+        "toast",
+        JSON.stringify({
+          type: "success",
+          title: "Case status updated",
+          description: `"{{ case.title }}" is now ${data.status.replace("_", " ")}.`,
+        }),
+      );
+
+      window.location.href = "/archive";
+    } catch (err) {
+      console.error(err);
+
+      showToast({
+        type: "error",
+        title: "Could not save",
+        description: "Please try again.",
+      });
+    }
+  }
+
+  function updateProgress() {
+    const badges = document.querySelectorAll(".field-status");
+
+    let complete = 0;
+
+    badges.forEach((badge) => {
+      if (badge.dataset.status === "complete") {
+        complete++;
+      }
+    });
+
+    const total = badges.length;
+    const progress = Math.round((complete / total) * 100);
+
+    const bar = document.getElementById("case-progress-bar");
+    const text = document.getElementById("case-progress-text");
+
+    bar.style.width = `${progress}%`;
+
+    if (progress === 100) {
+        bar.style.background = "#00BC7D";   // Green
+    } else if (progress >= 66) {
+        bar.style.background = "#3B82F6";   // Blue
+    } else if (progress >= 33) {
+        bar.style.background = "#FFB900";   // Orange
+    } else {
+        bar.style.background = "#EF4444";   // Red
+    }
+
+    text.textContent = `${progress}% Complete`;
   }
 </script>
 {% endblock %}
